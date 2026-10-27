@@ -90,15 +90,16 @@ def detect_hour_spikes(df: pd.DataFrame, z_thresh: float = 3.5, min_calls: int =
     return cell[cell["z"] > z_thresh].sort_values("z", ascending=False)
 
 
-def detect_weekly(df: pd.DataFrame, ratio_thresh: float = 3.0, min_calls: int = 20) -> pd.DataFrame:
-    """Weekday x hour slots whose leak% is >= ratio_thresh x the overall leak% (consistent weekly pattern)."""
+def detect_weekly(df: pd.DataFrame, ratio_thresh: float = 3.0, min_calls: int = 20, min_pct: float = 25.0) -> pd.DataFrame:
+    """Weekday x hour slots whose leak% is >= ratio_thresh x the overall leak% AND >= min_pct
+    (a batch fault leaves a large share of the slot unrated; 3x a tiny base rate is still noise)."""
     g = df.groupby(["weekday", "hour"], observed=True)
     slot = pd.DataFrame({"calls": g.size(), "expected": g["expected_charge"].sum(), "leaked": g["leak"].sum(),
                          "weeks_hit": g["day"].apply(lambda d: d[df.loc[d.index, "leak"] > 0].nunique())})
     slot["leak_pct"] = 100 * slot["leaked"] / slot["expected"]
     overall = 100 * df["leak"].sum() / df["expected_charge"].sum()
     slot["ratio"] = (slot["leak_pct"] / overall).round(2)
-    return slot[(slot["calls"] >= min_calls) & (slot["ratio"] >= ratio_thresh)].sort_values("ratio", ascending=False)
+    return slot[(slot["calls"] >= min_calls) & (slot["ratio"] >= ratio_thresh) & (slot["leak_pct"] >= min_pct)].sort_values("ratio", ascending=False)
 
 
 # ---------------------------------------------------------------- event matching
