@@ -33,9 +33,10 @@ def summarize_leakage(df: pd.DataFrame) -> dict:
     }
 
 
-def leakage_by(df: pd.DataFrame, column: str) -> pd.DataFrame:
-    """Leaking calls / leaked amount / % of that group's expected revenue, per `column`."""
-    grouped = df.groupby(column)
+def leakage_by(df: pd.DataFrame, column) -> pd.DataFrame:
+    """Leaking calls / leaked amount / % of that group's expected revenue, per `column`
+    (a column name or a list of column names)."""
+    grouped = df.groupby(column, observed=True)
     out = pd.DataFrame({
         "calls": grouped.size(),
         "leaking_calls": grouped["leak"].apply(lambda s: int((s > 0).sum())),
